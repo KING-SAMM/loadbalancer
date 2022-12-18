@@ -53,17 +53,28 @@ func handleErr(err error) {
 
 // simpleServer methods
 func (s *simpleServer) Address() string { return s.addr }
-func (s *simpleServer) IsAlive() bool { return bool }
+func (s *simpleServer) IsAlive() bool { return true }
 func (s *simpleServer) Serve(rw http.ResponseWriter, req *http.Request) {
 	s.proxy.ServeHTTP(rw, req)
 }
 
 // LoadBalaancer methods
-func (lb *LoadBalancer) getNextAvailableServer() *Server {
+func (lb *LoadBalancer) getNextAvailableServer() Server {
+	server := lb.servers[lb.roundRobinCount%len(lb.servers)]
 
+	for !server.IsAlive(){
+		lb.roundRobinCount++
+		server = lb.servers[lb.roundRobinCount%len(lb.servers)]
+	}
+	lb.roundRobinCount++
+	return server
 }
 
-func (lb *LoadBalancer) serveProxy(rw http.ResponseWriter, r *http.Request) {}
+func (lb *LoadBalancer) serveProxy(rw http.ResponseWriter, req *http.Request) {
+	targetServer := lb.getNextAvailableServer()
+	fmt.Printf("Forwarding request to address %q\n", targetServer.Address())
+	targetServer.Serve(rw, req)
+}
 
 func main() {
 	servers := []Server{
