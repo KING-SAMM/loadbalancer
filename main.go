@@ -51,8 +51,34 @@ func handleErr(err error) {
 	}
 }
 
+// simpleServer methods
+func (s *simpleServer) Address() string { return s.addr }
+func (s *simpleServer) IsAlive() bool { return bool }
+func (s *simpleServer) Serve(rw http.ResponseWriter, req *http.Request) {
+	s.proxy.ServeHTTP(rw, req)
+}
+
+// LoadBalaancer methods
 func (lb *LoadBalancer) getNextAvailableServer() *Server {
 
 }
 
-func (lb *LoadBalancer) serveProxy(rw http.ResponseWriter, r http.Request ) {}
+func (lb *LoadBalancer) serveProxy(rw http.ResponseWriter, r *http.Request) {}
+
+func main() {
+	servers := []Server{
+		newSimpleServer("https://favebook.com"),
+		newSimpleServer("https://bing.com"),
+		newSimpleServer("https://ducjducjgo.com"),
+	}
+
+	lb := NewLoadBalancer("8000", servers)
+
+	handleRedirect := func(rw http.ResponseWriter, req *http.Request) {
+		lb.serveProxy(rw, req)
+	}
+	http.HandleFunc("/", handleRedirect)
+
+	fmt.Printf("Serving requests at 'localhost %s'\n", lb.port)
+	http.ListenAndServe(":" +lb.port, nil)
+}
